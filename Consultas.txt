@@ -1,0 +1,326 @@
+﻿----------------------Consultas------------------------
+-------------------------------------------------------
+-----------------------Simples-------------------------
+-------------------------------------------------------
+--1
+db.pedido.find({})
+
+--2
+db.cliente.aggregate( 
+    {
+        $match: 
+        {
+            "_id" : 36
+        }
+    },
+    {
+        $lookup:
+        {
+            from: "pedido",
+            localField: "_id",
+            foreignField: "id_cliente",
+            as: "Pedido"
+        }
+    }
+
+)
+
+--3
+
+db.pedido.aggregate(
+    {
+        $match : {
+            "id_restaurante" : 6,
+            "id_cliente" : 44
+        }
+    },{
+        $lookup : {
+            from : "restaurante",
+            localField : "id_restaurante",
+            foreignField : "_id",
+            as : "pedido_restaurante"
+        }
+    },{
+        $lookup : {
+            from : "cliente",
+            localField : "id_cliente",
+            foreignField : "_id",
+            as : "pedido_cliente"
+        }
+    },{
+        $unwind : "$pedido_restaurante"
+    },{
+        $unwind : "$pedido_cliente"
+    },{
+        $project : {
+            "Restaurante" : "$pedido_restaurante.nome",
+            "Cliente" : "$pedido_cliente.nome",
+            "data do pedido" : "$data_pedido",
+            "hora do pedido" : "$hora_pedido",
+            "desconto" : "$desconto",
+            "pedido" : "$pedido"
+        }
+    }
+)
+
+--4
+
+db.getCollection('restaurantes').aggregate({
+    $match: {
+        '_id': {
+            $eq: 1
+        }
+    }
+}, {
+    $project: {
+        'cardapio': 1
+    }
+})
+
+--5
+
+db.getCollection('restaurantes').aggregate({
+    $match: {
+        '_id': {
+            $eq: 2
+        }
+    }
+}, {
+    $unwind: '$cardapio'
+}, {
+    $group: {
+        '_id': '$_id',
+        max: { $max: "$cardapio.preco" }
+    }
+})
+
+--6
+db.restaurante.aggregate([
+	{
+		$lookup:{
+			from: "pedidos",
+			localField: "_id",
+			foreignField: "id_restaurante",
+			as: "pedidosRestaurante"
+		}
+	},
+	{
+		$match: { "pedidosRestaurante": { $eq: [] } }
+	},
+])
+
+
+--7
+db.cliente.aggregate( 
+    {
+        $match: 
+        {
+            "_id" : 36
+        }
+    },
+    {
+        $project:{
+            _id:0,
+            cpf:1,
+            nome:1,
+            sexo:1,
+            endereco:1,
+            telefone:1,
+        }
+    }
+
+)
+
+--8
+
+db.restaurante.find({"_id":2})
+
+--9
+
+db.pedido.aggregate(
+{
+    $match : {
+        data_pedido : "07.08.2017"
+       }
+}
+)
+
+--10
+
+db.restaurante.aggregate(
+    {
+        $match : {
+            "_id" : 44
+        }
+    },{
+        $lookup : {
+            from : "pedido",
+            localField : "_id",
+            foreignField : "id_restaurante",
+            as : "restaurante_pedido"
+        }
+    },{
+        $project : {
+            "_id" : "$_id",
+            "cnpj" : "$cnpj",
+            "nome" : "$nome",
+            "endereço" : "$endereço",
+            "telefone" : "$telefone",
+            "email" : "$email",
+            "cardapio" : "$cardapio",
+            "pedidos" : "$restaurante_pedido"
+        }
+    }
+)
+
+
+
+-------------------------------------------------------
+----------------------Complexas------------------------
+-------------------------------------------------------
+
+--1
+
+db.pedido.aggregate(
+    {
+        $match : {
+            "_id" : ObjectId("5b28f7d5323fc4db647c2a7c")
+        }
+    },{
+        $unwind : "$pedido"
+    },{
+       $project : {
+            "_id" : true,
+            "desconto" : "$desconto",
+            "prato" : "$pedido.prato",
+            "precoUnitario" : "$pedido.precoUnitario"
+        }
+    },{
+        $group : {
+            "_id" : true,
+            "desconto (%)" : {$first : "$desconto"},
+            "Comanda" : {$push: {"prato" : "$prato", "preco" : "$precoUnitario"}},
+            "Total sem desconto" : {$sum : "$precoUnitario"},
+        }
+    }
+)
+
+--2
+db.pedido.aggregate( 
+    {
+        $match: 
+        {
+            "id_restaurante" : 49
+        }
+    },{
+        $unwind : "$pedido"
+    },
+    {
+        $project:
+        {
+            "_id" : true,
+            "desconto" : "$desconto",
+            "precoUnitario" : "$pedido.precoUnitario"
+
+        }
+    },{
+        $group : {
+            "_id" : true,
+            "Total" : { $sum : "$precoUnitario"},
+        }
+    }
+)
+
+
+--3
+
+db.pedidos.aggregate([
+	{
+		$match: {"_id":ObjectId("5b27bf0960ded9153795321d")}
+	},
+	{
+		$lookup:{
+			from: "clientes",
+			localField: "id_cliente",
+			foreignField: "_id",
+			as: "info_cliente"
+		}
+	},
+	{
+		$lookup:{
+			from: "restaurante",
+			localField: "id_restaurante",
+			foreignField: "_id",
+			as: "info_restaurante"
+		}
+	},
+	{
+		$project:{
+			"clienteInfo": "$info_cliente",
+			"restauranteInfo": "$info_restaurante"
+		}
+	}
+])
+
+--4
+db.getCollection('usuarios').aggregate([{
+        $match: {
+            '_id': {
+                $eq: 30
+            }
+        }
+    },
+    {
+        $lookup: {
+            'from': 'pedidos',
+            'localField': '_id',
+            'foreignField': 'id_cliente',
+            'as': 'pedidos'
+        }
+    }, {
+        $project: {
+            'pedidos': 1
+        }
+    }
+])
+
+--5
+
+db.pedido.aggregate(
+    {
+        $match : {
+            "_id" : ObjectId("5b28f7d5323fc4db647c2a7c")
+        }
+    },{
+        $project : {
+            "desconto (%)" : "$desconto",
+            "Total do pedido" : { $sum : ["$pedido.precoUnitario"]},
+            "valor com desconto" : {$subtract : [{ $sum : ["$pedido.precoUnitario"]},{ $multiply : [{ $sum : ["$pedido.precoUnitario"]}, { $divide : ["$desconto", 100]}]}]}
+        }
+    }
+)
+
+-------------------------------------------------------
+-----------------------Questões------------------------
+-------------------------------------------------------
+
+--SIMPLES
+
+1 - CONSULTAR TODOS OS PEDIDOS
+2 - CONSULTAR PEDIDOS PELO ID DO CLIENTE
+3 - CONSULTAR PEDIDOS PELO ID DO CLIENTE E O ID DO RESTAURANTE
+4 - CONSULTAR OS PRATOS DE UM RESTAURANTE PELO ID
+5 - CONSULTAR O PRATO MAIS CARO PELO ID DO RESTAURANTE
+6 - CONSULTAR RESTAURANTE QUE NÃO VENDEU NADA PELO ID
+7 - CONSULTAR INFORMAÇÕES DO CLIENTE PELO ID
+8 - CONSULTAR INFORMAÇÕES DO RESTAURANTE PELO ID
+9 - CONSULTAR PEDIDOS EM UMA DATA
+10 - CONSULTAR O NOME DO RESTAURANTE PELO ID E MOSTRAR OS PEDIDOS
+
+--COMPLEXAS
+
+1 - CALCULAR PREÇO DO PEDIDO PELO ID DO PEDIDO
+2 - CALCULAR PREÇO DE TODOS OS PEDIDOS DE UM DETERMINADO RESTAURANTE PELO ID
+3 - PELO ID DO PEDIDO CONSULTAR DADOS DO CLIENTE E DO RESTAURANTE
+4 - PELO ID DO CLIENTE CONSULTAR TODOS OS PEDIDOS
+5 - CALCULAR O DESCONTO DE UM PEDIDO PELO ID

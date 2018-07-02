@@ -1,0 +1,17 @@
+mongod --replSet "rs0" --bind_ip localhost,hostname
+
+mongo
+
+rs.initiate( {
+   _id : "rs0",
+   members: [
+      { _id: 0, host: "hostname:27017" },
+      { _id: 1, host: "hostname:27017" }
+   ]
+})
+
+
+
+cfg = rs.conf()
+cfg.settings.getLastErrorDefaults = { w: "majority", wtimeout: 5000 }
+rs.reconfig(cfg)
